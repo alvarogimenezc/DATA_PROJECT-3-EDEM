@@ -8,17 +8,17 @@ CREATE TABLE IF NOT EXISTS usuarios (
     direccion TEXT,
     fecha_registro TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
-
+ 
 -- Tabla de Artículos
 CREATE TABLE IF NOT EXISTS articulos (
     articulo_id INT PRIMARY KEY,
     nombre VARCHAR(50),
     descripcion TEXT,
     estado VARCHAR(20),
-    genero VARCHAR(20),
     categoria VARCHAR(50),
     unidad_medida VARCHAR(10),
-    precio_unitario NUMERIC(12, 2)
+    precio_unitario NUMERIC(12, 2),
+    url_imagen VARCHAR(255)
 );
 
 -- Tabla de Transacciones

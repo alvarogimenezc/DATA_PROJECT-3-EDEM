@@ -1,1 +1,2 @@
-En la carpeta init-db el docker compose irá a buscar el esquema al levantar con el docker compose
+-En la carpeta init-db el docker compose irá a buscar el esquema al levantarse
+-En la carperta images guardamos las fotos de los artículos, en la bbdd insertamos la url
