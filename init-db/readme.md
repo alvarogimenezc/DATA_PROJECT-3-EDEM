@@ -1,2 +1,3 @@
--En la carpeta init-db el docker compose irá a buscar el esquema al levantarse
--En la carperta images guardamos las fotos de los artículos, en la bbdd insertamos la url
+-En la carpeta init-db el docker compose irá a buscar el esquema al levantarse, si no existía se crea.
+-En la carperta images guardamos las fotos de los artículos, en la bbdd insertamos la url.
+-Se genera un .env en la carpeta raiz para las variables de entorno, hay que grabarlas antes de levantar el proyecto.
