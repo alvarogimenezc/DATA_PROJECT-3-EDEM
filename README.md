@@ -1,6 +1,6 @@
 # DATA_PROJECT-3-EDEM
 
-## Arquitectura.
+## Arquitectura
 
 ![Texto alternativo](arquitectura.png)
 
