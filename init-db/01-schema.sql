@@ -5,6 +5,7 @@ CREATE TABLE IF NOT EXISTS usuarios (
     email VARCHAR(100) UNIQUE,
     telefono VARCHAR(20),
     direccion TEXT,
+    password_hash VARCHAR(255) NOT NULL,
     fecha_registro TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
