@@ -1,6 +1,5 @@
--- Tabla de Usuarios
 CREATE TABLE IF NOT EXISTS usuarios (
-    usuario_id INT PRIMARY KEY,
+    usuario_id SERIAL PRIMARY KEY,
     nombre VARCHAR(100) NOT NULL,
     apellidos VARCHAR(100),
     email VARCHAR(100) UNIQUE,
@@ -8,10 +7,9 @@ CREATE TABLE IF NOT EXISTS usuarios (
     direccion TEXT,
     fecha_registro TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
- 
--- Tabla de Artículos
+
 CREATE TABLE IF NOT EXISTS articulos (
-    articulo_id INT PRIMARY KEY,
+    articulo_id SERIAL PRIMARY KEY,
     nombre VARCHAR(50),
     descripcion TEXT,
     estado VARCHAR(20),
@@ -21,9 +19,8 @@ CREATE TABLE IF NOT EXISTS articulos (
     url_imagen VARCHAR(255)
 );
 
--- Tabla de Transacciones
 CREATE TABLE IF NOT EXISTS transacciones (
-    transaccion_id INT PRIMARY KEY,
+    transaccion_id SERIAL PRIMARY KEY,
     fecha TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     usuario_id INT REFERENCES usuarios(usuario_id),
     articulo_id INT REFERENCES articulos(articulo_id),
