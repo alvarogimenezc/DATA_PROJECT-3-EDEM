@@ -29,3 +29,44 @@ CREATE TABLE IF NOT EXISTS transacciones (
     tipo_movimiento VARCHAR(20),
     coste_total NUMERIC(12, 2)
 );
+
+INSERT INTO articulos 
+    (nombre, descripcion, estado, categoria, unidad_medida, precio_unitario, url_imagen)
+VALUES
+    (
+        'Camiseta vintage negra',
+        'Camiseta negra oversize con corte vintage.',
+        'nuevo',
+        'camisetas',
+        'ud',
+        24.99,
+        '/images/camiseta-vintage-negra.png'
+    ),
+    (
+        'Camiseta streetwear blanca',
+        'Camiseta blanca de algodon con estilo urbano.',
+        'nuevo',
+        'camisetas',
+        'ud',
+        22.50,
+        '/images/camiseta-streetwear-blanca.png'
+    ),
+    (
+        'Camiseta retro azul',
+        'Camiseta azul con inspiracion retro y fit relajado.',
+        'segunda mano',
+        'camisetas',
+        'ud',
+        18.00,
+        '/images/camiseta-retro-azul.png'
+    ),
+    (
+        'Camiseta grafica roja',
+        'Camiseta roja con estampado grafico frontal.',
+        'nuevo',
+        'camisetas',
+        'ud',
+        27.99,
+        '/images/camiseta-grafica-roja.png'
+    )
+ON CONFLICT DO NOTHING;

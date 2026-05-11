@@ -1,6 +1,7 @@
 from fastapi import FastAPI, HTTPException, Depends
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
 from database import get_connection
 from models import (ArticuloOut, CompraIn, CompraOut,
                     UsuarioRegister, UsuarioLogin, UsuarioOut, TokenOut)
@@ -21,6 +22,8 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+app.mount("/images", StaticFiles(directory="/app/images"), name="images")
 
 security = HTTPBearer()
 
