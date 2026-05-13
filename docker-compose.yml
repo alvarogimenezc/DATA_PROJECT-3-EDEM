@@ -35,5 +35,13 @@ services:
       - ./server:/app
       - ./images:/app/images:ro
 
+  frontend:
+    build: ./frontend
+    container_name: tienda_frontend
+    ports:
+      - "3000:80" # Entraréis por http://localhost:3000
+    depends_on:
+      - server
+
 volumes:
   postgres_data:
