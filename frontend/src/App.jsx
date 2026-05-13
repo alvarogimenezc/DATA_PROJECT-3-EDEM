@@ -139,7 +139,7 @@ function App() {
         <p className="text-stone-600 font-light leading-relaxed">Cada pieza ha sido cuidadosamente seleccionada para garantizar autenticidad y carácter. Descubre la elegancia del streetwear atemporal.</p>
       </div>
 
-      {/* --- GRID DE PRODUCTOS --- */}
+      {/* ---- GRID DE PRODUCTOS ---- */}
       {cargando ? (
         <div className="text-center py-20 font-serif text-xl italic text-stone-500 animate-pulse">Preparando el catálogo...</div>
       ) : (
