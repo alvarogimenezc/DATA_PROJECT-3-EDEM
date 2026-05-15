@@ -6,7 +6,7 @@ from database import get_connection
 from models import (ArticuloOut, CompraIn, CompraOut,
                     UsuarioRegister, UsuarioLogin, UsuarioOut, TokenOut)
 from auth import hash_password, verify_password, create_access_token, decode_token
-from typing import List
+from typing import List, Optional
 
 app = FastAPI(
     title="Vintage & Streetwear API",
@@ -142,22 +142,83 @@ def get_me(current_user: dict = Depends(get_current_user)):
 
 
 # ─────────────────────────────────────────────────────────────
-# 5. GET ARTICULOS — catálogo público (no requiere login)
+# 5. GET ARTICULOS — catálogo público con filtros opcionales
 # ─────────────────────────────────────────────────────────────
+COLS_ARTICULO = ["articulo_id", "nombre", "descripcion", "estado",
+                 "categoria", "unidad_medida", "precio_unitario", "url_imagen",
+                 "talla", "es_drop", "es_destacado"]
+
 @app.get("/getArticulos", response_model=List[ArticuloOut], tags=["Artículos"])
-def get_articulos():
+def get_articulos(talla: Optional[str] = None, estado: Optional[str] = None):
     conn = get_connection()
     cur = conn.cursor()
     try:
-        cur.execute("""
+        conditions, params = [], []
+        if talla:
+            conditions.append("talla = %s")
+            params.append(talla)
+        if estado:
+            conditions.append("estado = %s")
+            params.append(estado)
+        where = ("WHERE " + " AND ".join(conditions)) if conditions else ""
+        cur.execute(f"""
             SELECT articulo_id, nombre, descripcion, estado,
-                   categoria, unidad_medida, precio_unitario, url_imagen
-            FROM articulos
+                   categoria, unidad_medida, precio_unitario, url_imagen,
+                   talla, es_drop, es_destacado
+            FROM articulos {where}
+        """, params)
+        rows = cur.fetchall()
+        return [dict(zip(COLS_ARTICULO, row)) for row in rows]
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+    finally:
+        cur.close()
+        conn.close()
+
+
+# ─────────────────────────────────────────────────────────────
+# 5b. GET DROPS — artículos marcados como drop semanal
+# ─────────────────────────────────────────────────────────────
+@app.get("/getDrops", response_model=List[ArticuloOut], tags=["Artículos"])
+def get_drops():
+    conn = get_connection()
+    cur = conn.cursor()
+    try:
+        cur.execute(f"""
+            SELECT articulo_id, nombre, descripcion, estado,
+                   categoria, unidad_medida, precio_unitario, url_imagen,
+                   talla, es_drop, es_destacado
+            FROM articulos WHERE es_drop = TRUE
         """)
         rows = cur.fetchall()
-        cols = ["articulo_id", "nombre", "descripcion", "estado",
-                "categoria", "unidad_medida", "precio_unitario", "url_imagen"]
-        return [dict(zip(cols, row)) for row in rows]
+        return [dict(zip(COLS_ARTICULO, row)) for row in rows]
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+    finally:
+        cur.close()
+        conn.close()
+
+
+# ─────────────────────────────────────────────────────────────
+# 5c. GET DESTACADO — producto destacado de la semana
+# ─────────────────────────────────────────────────────────────
+@app.get("/getDestacado", response_model=ArticuloOut, tags=["Artículos"])
+def get_destacado():
+    conn = get_connection()
+    cur = conn.cursor()
+    try:
+        cur.execute(f"""
+            SELECT articulo_id, nombre, descripcion, estado,
+                   categoria, unidad_medida, precio_unitario, url_imagen,
+                   talla, es_drop, es_destacado
+            FROM articulos WHERE es_destacado = TRUE LIMIT 1
+        """)
+        row = cur.fetchone()
+        if not row:
+            raise HTTPException(status_code=404, detail="No hay producto destacado")
+        return dict(zip(COLS_ARTICULO, row))
+    except HTTPException:
+        raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
     finally:

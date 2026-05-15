@@ -11,6 +11,9 @@ class ArticuloOut(BaseModel):
     unidad_medida: Optional[str]
     precio_unitario: Optional[float]
     url_imagen: Optional[str]
+    talla: Optional[str]
+    es_drop: Optional[bool] = False
+    es_destacado: Optional[bool] = False
 
 class CompraIn(BaseModel):
     articulo_id: int

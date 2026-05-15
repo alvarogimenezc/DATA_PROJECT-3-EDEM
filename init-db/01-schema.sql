@@ -17,7 +17,10 @@ CREATE TABLE IF NOT EXISTS articulos (
     categoria VARCHAR(50),
     unidad_medida VARCHAR(10),
     precio_unitario NUMERIC(12, 2),
-    url_imagen VARCHAR(255)
+    url_imagen VARCHAR(255),
+    talla VARCHAR(5),
+    es_drop BOOLEAN DEFAULT FALSE,
+    es_destacado BOOLEAN DEFAULT FALSE
 );
 
 CREATE TABLE IF NOT EXISTS transacciones (
@@ -30,8 +33,8 @@ CREATE TABLE IF NOT EXISTS transacciones (
     coste_total NUMERIC(12, 2)
 );
 
-INSERT INTO articulos 
-    (nombre, descripcion, estado, categoria, unidad_medida, precio_unitario, url_imagen)
+INSERT INTO articulos
+    (nombre, descripcion, estado, categoria, unidad_medida, precio_unitario, url_imagen, talla, es_drop, es_destacado)
 VALUES
     (
         'Camiseta vintage negra',
@@ -40,7 +43,10 @@ VALUES
         'camisetas',
         'ud',
         24.99,
-        '/images/camiseta-vintage-negra.png'
+        '/images/camiseta-vintage-negra.png',
+        'L',
+        FALSE,
+        TRUE
     ),
     (
         'Camiseta streetwear blanca',
@@ -49,7 +55,10 @@ VALUES
         'camisetas',
         'ud',
         22.50,
-        '/images/camiseta-streetwear-blanca.png'
+        '/images/camiseta-streetwear-blanca.png',
+        'M',
+        TRUE,
+        FALSE
     ),
     (
         'Camiseta retro azul',
@@ -58,7 +67,10 @@ VALUES
         'camisetas',
         'ud',
         18.00,
-        '/images/camiseta-retro-azul.png'
+        '/images/camiseta-retro-azul.png',
+        'S',
+        FALSE,
+        FALSE
     ),
     (
         'Camiseta grafica roja',
@@ -67,6 +79,9 @@ VALUES
         'camisetas',
         'ud',
         27.99,
-        '/images/camiseta-grafica-roja.png'
+        '/images/camiseta-grafica-roja.png',
+        'XL',
+        TRUE,
+        FALSE
     )
 ON CONFLICT DO NOTHING;
