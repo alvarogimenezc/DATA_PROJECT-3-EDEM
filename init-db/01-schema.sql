@@ -85,3 +85,68 @@ VALUES
         FALSE
     )
 ON CONFLICT DO NOTHING;
+
+INSERT INTO articulos
+    (nombre, descripcion, estado, categoria, unidad_medida, precio_unitario, url_imagen, talla, es_drop, es_destacado)
+VALUES
+    (
+        'Zapatilla Blanca Multicolor',
+        'Zapatilla blanca con parche multicolor en tonos rosa, azul y verde. Suela gum y detalles cromáticos en el lateral.',
+        'nuevo',
+        'zapatillas',
+        'ud',
+        89.99,
+        '/images/zapatilla-running-blanca.png',
+        '42',
+        FALSE,
+        FALSE
+    ),
+    (
+        'Zapatilla Basket Azul',
+        'Zapatilla azul y gris con gran X lateral. Estilo basket urbano con suela chunky y refuerzos en ante.',
+        'nuevo',
+        'zapatillas',
+        'ud',
+        109.99,
+        '/images/zapatilla-basket-negra.png',
+        '41',
+        TRUE,
+        FALSE
+    ),
+    (
+        'Zapatilla Runner Beige',
+        'Runner retro en tonos beige, verde y naranja. Capas de tejido y ante con suela gum gruesa. Estética de los 90s.',
+        'nuevo',
+        'zapatillas',
+        'ud',
+        95.00,
+        '/images/zapatilla-retro-roja.png',
+        '43',
+        TRUE,
+        FALSE
+    ),
+    (
+        'Zapatilla Verde Gamba',
+        'Zapatilla verde intensa con H blanco lateral. Inspirada en el fútbol sala de los 80s. Suela gum y puntera reforzada.',
+        'segunda mano',
+        'zapatillas',
+        'ud',
+        55.00,
+        '/images/zapatilla-urbana-gris.png',
+        '40',
+        FALSE,
+        FALSE
+    ),
+    (
+        'Zapatilla Clásica Blanca',
+        'Silueta clásica en blanco roto con swoosh negro y suela gum caramelo. Icónica del running vintage americano.',
+        'segunda mano',
+        'zapatillas',
+        'ud',
+        72.50,
+        '/images/zapatilla-vintage-azul.png',
+        '44',
+        FALSE,
+        FALSE
+    )
+ON CONFLICT DO NOTHING;
