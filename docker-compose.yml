@@ -28,11 +28,13 @@ services:
       - "8000:8000"
     env_file:
       - .env
+    environment:
+      - DB_HOST=db
+      - CORS_ORIGINS=http://localhost:3000
     depends_on:
       db:
         condition: service_healthy
     volumes:
-      - ./server:/app
       - ./images:/app/images:ro
 
   frontend:
