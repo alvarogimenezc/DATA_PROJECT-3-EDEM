@@ -17,7 +17,7 @@ function ProductCard({ art, badge, esFav, onFavorito, onAnadir }) {
           {esFav ? '❤️' : '🤍'}
         </button>
         <img
-          src={`http://localhost:8000${art.url_imagen}`}
+          src={`${import.meta.env.VITE_API_URL}${art.url_imagen}`}
           alt={art.nombre}
           className="w-full h-full object-cover mix-blend-multiply group-hover:scale-105 group-hover:sepia-[0.2] transition-all duration-700 ease-in-out"
         />
@@ -61,7 +61,7 @@ function App() {
     const favsGuardados = localStorage.getItem('favoritos');
     if (favsGuardados) setFavoritos(JSON.parse(favsGuardados));
 
-    fetch('http://localhost:8000/getArticulos')
+    fetch(`${import.meta.env.VITE_API_URL}/getArticulos`)
       .then(res => res.json())
       .then(data => { setArticulos(data); setCargando(false); })
       .catch(err => { console.error("Error:", err); setCargando(false); });
@@ -87,7 +87,7 @@ function App() {
     let errores = 0;
     for (const item of carrito) {
       try {
-        const res = await fetch('http://localhost:8000/setCompraUserId', {
+        const res = await fetch(`${import.meta.env.VITE_API_URL}/setCompraUserId`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
           body: JSON.stringify({ articulo_id: item.articulo_id, cantidad: 1, tipo_movimiento: "venta", coste_total: item.precio_unitario }),
@@ -193,7 +193,7 @@ function App() {
           <div className="grid grid-cols-1 md:grid-cols-2 bg-[#EBE7E0]">
             <div className="aspect-[4/3] md:aspect-auto overflow-hidden">
               <img
-                src={`http://localhost:8000${destacado.url_imagen}`}
+                src={`${import.meta.env.VITE_API_URL}${destacado.url_imagen}`}
                 alt={destacado.nombre}
                 className="w-full h-full object-cover hover:scale-105 transition-transform duration-700"
               />
