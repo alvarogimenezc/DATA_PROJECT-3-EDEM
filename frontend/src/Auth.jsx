@@ -15,7 +15,7 @@ export default function Auth({ onLogin, onCerrar }) {
     const endpoint = esRegistro ? 'register' : 'login';
     
     try {
-      const response = await fetch(`http://localhost:8000/${endpoint}`, {
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/${endpoint}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(

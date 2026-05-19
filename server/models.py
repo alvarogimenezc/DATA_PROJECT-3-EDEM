@@ -19,7 +19,6 @@ class CompraIn(BaseModel):
     articulo_id: int
     cantidad: float
     tipo_movimiento: str
-    coste_total: float
 
 class CompraOut(BaseModel):
     transaccion_id: int

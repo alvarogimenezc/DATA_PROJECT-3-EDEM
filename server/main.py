@@ -1,12 +1,21 @@
-from fastapi import FastAPI, HTTPException, Depends
+import os
+import logging
+from fastapi import FastAPI, HTTPException, Depends, Request
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
-from database import get_connection
+from slowapi import Limiter, _rate_limit_exceeded_handler
+from slowapi.util import get_remote_address
+from slowapi.errors import RateLimitExceeded
+from database import get_connection, release_connection
 from models import (ArticuloOut, CompraIn, CompraOut,
                     UsuarioRegister, UsuarioLogin, UsuarioOut, TokenOut)
 from auth import hash_password, verify_password, create_access_token, decode_token
 from typing import List, Optional
+
+logger = logging.getLogger(__name__)
+
+limiter = Limiter(key_func=get_remote_address)
 
 app = FastAPI(
     title="Vintage & Streetwear API",
@@ -14,10 +23,13 @@ app = FastAPI(
     version="2.0.0"
 )
 
-# CORS — permite que el frontend (cualquier origen en desarrollo) llame a la API
+app.state.limiter = limiter
+app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
+
+_cors_origins = os.getenv("CORS_ORIGINS", "http://localhost:3000").split(",")
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],       # en producción cambiar por la URL del frontend
+    allow_origins=_cors_origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -28,10 +40,9 @@ app.mount("/images", StaticFiles(directory="/app/images"), name="images")
 security = HTTPBearer()
 
 def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(security)):
-    """Dependencia que extrae y valida el token JWT del header Authorization."""
     try:
         payload = decode_token(credentials.credentials)
-        return payload  # contiene usuario_id y email
+        return payload
     except ValueError:
         raise HTTPException(status_code=401, detail="Token inválido o expirado")
 
@@ -45,19 +56,18 @@ def ping_pong():
 
 
 # ─────────────────────────────────────────────────────────────
-# 2. REGISTRO — crea un usuario nuevo y devuelve token
+# 2. REGISTRO
 # ─────────────────────────────────────────────────────────────
 @app.post("/register", response_model=TokenOut, tags=["Usuarios"])
-def register(usuario: UsuarioRegister):
+@limiter.limit("3/minute")
+def register(request: Request, usuario: UsuarioRegister):
     conn = get_connection()
     cur = conn.cursor()
     try:
-        # Comprobar si el email ya existe
         cur.execute("SELECT usuario_id FROM usuarios WHERE email = %s", (usuario.email,))
         if cur.fetchone():
             raise HTTPException(status_code=400, detail="El email ya está registrado")
 
-        # Cifrar la contraseña antes de guardarla
         password_hash = hash_password(usuario.password)
 
         cur.execute("""
@@ -71,24 +81,25 @@ def register(usuario: UsuarioRegister):
         cols = ["usuario_id", "nombre", "apellidos", "email", "telefono", "direccion", "fecha_registro"]
         usuario_data = dict(zip(cols, row))
 
-        # Generar token JWT
         token = create_access_token({"usuario_id": usuario_data["usuario_id"], "email": usuario_data["email"]})
         return {"access_token": token, "token_type": "bearer", "usuario": usuario_data}
     except HTTPException:
         raise
     except Exception as e:
         conn.rollback()
-        raise HTTPException(status_code=500, detail=str(e))
+        logger.error("Error en /register: %s", e)
+        raise HTTPException(status_code=500, detail="Error interno del servidor")
     finally:
         cur.close()
-        conn.close()
+        release_connection(conn)
 
 
 # ─────────────────────────────────────────────────────────────
-# 3. LOGIN — devuelve token si las credenciales son correctas
+# 3. LOGIN
 # ─────────────────────────────────────────────────────────────
 @app.post("/login", response_model=TokenOut, tags=["Usuarios"])
-def login(credenciales: UsuarioLogin):
+@limiter.limit("5/minute")
+def login(request: Request, credenciales: UsuarioLogin):
     conn = get_connection()
     cur = conn.cursor()
     try:
@@ -108,19 +119,20 @@ def login(credenciales: UsuarioLogin):
             raise HTTPException(status_code=401, detail="Email o contraseña incorrectos")
 
         token = create_access_token({"usuario_id": usuario_data["usuario_id"], "email": usuario_data["email"]})
-        usuario_data.pop("password_hash")  # nunca se devuelve el hash
+        usuario_data.pop("password_hash")
         return {"access_token": token, "token_type": "bearer", "usuario": usuario_data}
     except HTTPException:
         raise
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        logger.error("Error en /login: %s", e)
+        raise HTTPException(status_code=500, detail="Error interno del servidor")
     finally:
         cur.close()
-        conn.close()
+        release_connection(conn)
 
 
 # ─────────────────────────────────────────────────────────────
-# 4. PERFIL — devuelve los datos del usuario logueado
+# 4. PERFIL
 # ─────────────────────────────────────────────────────────────
 @app.get("/me", response_model=UsuarioOut, tags=["Usuarios"])
 def get_me(current_user: dict = Depends(get_current_user)):
@@ -135,14 +147,15 @@ def get_me(current_user: dict = Depends(get_current_user)):
         cols = ["usuario_id", "nombre", "apellidos", "email", "telefono", "direccion", "fecha_registro"]
         return dict(zip(cols, row))
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        logger.error("Error en /me: %s", e)
+        raise HTTPException(status_code=500, detail="Error interno del servidor")
     finally:
         cur.close()
-        conn.close()
+        release_connection(conn)
 
 
 # ─────────────────────────────────────────────────────────────
-# 5. GET ARTICULOS — catálogo público con filtros opcionales
+# 5. GET ARTICULOS
 # ─────────────────────────────────────────────────────────────
 COLS_ARTICULO = ["articulo_id", "nombre", "descripcion", "estado",
                  "categoria", "unidad_medida", "precio_unitario", "url_imagen",
@@ -170,21 +183,22 @@ def get_articulos(talla: Optional[str] = None, estado: Optional[str] = None):
         rows = cur.fetchall()
         return [dict(zip(COLS_ARTICULO, row)) for row in rows]
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        logger.error("Error en /getArticulos: %s", e)
+        raise HTTPException(status_code=500, detail="Error interno del servidor")
     finally:
         cur.close()
-        conn.close()
+        release_connection(conn)
 
 
 # ─────────────────────────────────────────────────────────────
-# 5b. GET DROPS — artículos marcados como drop semanal
+# 5b. GET DROPS
 # ─────────────────────────────────────────────────────────────
 @app.get("/getDrops", response_model=List[ArticuloOut], tags=["Artículos"])
 def get_drops():
     conn = get_connection()
     cur = conn.cursor()
     try:
-        cur.execute(f"""
+        cur.execute("""
             SELECT articulo_id, nombre, descripcion, estado,
                    categoria, unidad_medida, precio_unitario, url_imagen,
                    talla, es_drop, es_destacado
@@ -193,21 +207,22 @@ def get_drops():
         rows = cur.fetchall()
         return [dict(zip(COLS_ARTICULO, row)) for row in rows]
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        logger.error("Error en /getDrops: %s", e)
+        raise HTTPException(status_code=500, detail="Error interno del servidor")
     finally:
         cur.close()
-        conn.close()
+        release_connection(conn)
 
 
 # ─────────────────────────────────────────────────────────────
-# 5c. GET DESTACADO — producto destacado de la semana
+# 5c. GET DESTACADO
 # ─────────────────────────────────────────────────────────────
 @app.get("/getDestacado", response_model=ArticuloOut, tags=["Artículos"])
 def get_destacado():
     conn = get_connection()
     cur = conn.cursor()
     try:
-        cur.execute(f"""
+        cur.execute("""
             SELECT articulo_id, nombre, descripcion, estado,
                    categoria, unidad_medida, precio_unitario, url_imagen,
                    talla, es_drop, es_destacado
@@ -220,14 +235,15 @@ def get_destacado():
     except HTTPException:
         raise
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        logger.error("Error en /getDestacado: %s", e)
+        raise HTTPException(status_code=500, detail="Error interno del servidor")
     finally:
         cur.close()
-        conn.close()
+        release_connection(conn)
 
 
 # ─────────────────────────────────────────────────────────────
-# 6. GET COMPRAS — historial del usuario logueado
+# 6. GET COMPRAS
 # ─────────────────────────────────────────────────────────────
 @app.get("/getCompraUserId", response_model=List[CompraOut], tags=["Transacciones"])
 def get_compra_user_id(current_user: dict = Depends(get_current_user)):
@@ -248,26 +264,28 @@ def get_compra_user_id(current_user: dict = Depends(get_current_user)):
     except HTTPException:
         raise
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        logger.error("Error en /getCompraUserId: %s", e)
+        raise HTTPException(status_code=500, detail="Error interno del servidor")
     finally:
         cur.close()
-        conn.close()
+        release_connection(conn)
 
 
 # ─────────────────────────────────────────────────────────────
-# 7. SET COMPRA — registrar compra del usuario logueado
+# 7. SET COMPRA
 # ─────────────────────────────────────────────────────────────
 @app.post("/setCompraUserId", response_model=CompraOut, tags=["Transacciones"])
 def set_compra_user_id(compra: CompraIn, current_user: dict = Depends(get_current_user)):
     conn = get_connection()
     cur = conn.cursor()
     try:
-        # Verificar que el artículo existe
-        cur.execute("SELECT articulo_id FROM articulos WHERE articulo_id = %s", (compra.articulo_id,))
-        if not cur.fetchone():
+        # Precio calculado desde la BD — nunca se confía en el cliente
+        cur.execute("SELECT precio_unitario FROM articulos WHERE articulo_id = %s", (compra.articulo_id,))
+        row = cur.fetchone()
+        if not row:
             raise HTTPException(status_code=404, detail="El artículo no existe")
+        coste_total = float(row[0]) * compra.cantidad
 
-        # El usuario_id viene del token, no del body
         cur.execute("""
             INSERT INTO transacciones
                 (usuario_id, articulo_id, cantidad, tipo_movimiento, coste_total)
@@ -275,7 +293,7 @@ def set_compra_user_id(compra: CompraIn, current_user: dict = Depends(get_curren
             RETURNING transaccion_id, fecha, usuario_id, articulo_id,
                       cantidad, tipo_movimiento, coste_total
         """, (current_user["usuario_id"], compra.articulo_id,
-              compra.cantidad, compra.tipo_movimiento, compra.coste_total))
+              compra.cantidad, compra.tipo_movimiento, coste_total))
         conn.commit()
         row = cur.fetchone()
         cols = ["transaccion_id", "fecha", "usuario_id", "articulo_id",
@@ -285,7 +303,8 @@ def set_compra_user_id(compra: CompraIn, current_user: dict = Depends(get_curren
         raise
     except Exception as e:
         conn.rollback()
-        raise HTTPException(status_code=500, detail=str(e))
+        logger.error("Error en /setCompraUserId: %s", e)
+        raise HTTPException(status_code=500, detail="Error interno del servidor")
     finally:
         cur.close()
-        conn.close()
+        release_connection(conn)
